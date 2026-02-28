@@ -1,0 +1,25 @@
+{
+  "name": "a-stock-warrior",
+  "version": "1.0.0",
+  "description": "大A战士 - 定期执行股票和ETF策略筛选工具",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "stock": "node src/index.js stock",
+    "fund": "node src/index.js fund"
+  },
+  "keywords": [
+    "量化",
+    "选股",
+    "ETF",
+    "股票筛选",
+    "A股"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "iconv-lite": "^0.6.3"
+  }
+}
