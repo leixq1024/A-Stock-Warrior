@@ -2,16 +2,217 @@ const config = require('./config');
 const output = require('./output/console');
 
 const MOCK_ETF_DATA = [
-  { code: '510300', name: '沪深300ETF', price: 3.856, change: 0.015, changePct: 0.39, volume: 18567432, amount: 7.15, pe: 12.5, pb: 1.32, waveScore: 85, trend: '上升' },
-  { code: '510500', name: '500ETF', price: 5.672, change: -0.023, changePct: -0.40, volume: 8932451, amount: 5.06, pe: 18.2, pb: 1.65, waveScore: 72, trend: '震荡' },
-  { code: '159919', name: '券商ETF', price: 1.245, change: 0.038, changePct: 3.15, volume: 45678234, amount: 5.68, pe: 22.5, pb: 1.89, waveScore: 92, trend: '上升' },
-  { code: '159995', name: '券商ETF', price: 1.123, change: 0.025, changePct: 2.28, volume: 32456789, amount: 3.64, pe: 20.8, pb: 1.75, waveScore: 88, trend: '上升' },
-  { code: '512880', name: '证券ETF', price: 1.567, change: 0.042, changePct: 2.75, volume: 28945678, amount: 4.53, pe: 21.3, pb: 1.82, waveScore: 90, trend: '上升' },
-  { code: '159941', name: '纳指ETF', price: 2.345, change: -0.015, changePct: -0.64, volume: 12345678, amount: 2.89, pe: 28.5, pb: 3.2, waveScore: 65, trend: '下跌' },
-  { code: '513050', name: '中概互联网ETF', price: 1.023, change: 0.008, changePct: 0.79, volume: 9876543, amount: 1.01, pe: 32.1, pb: 2.8, waveScore: 58, trend: '震荡' },
-  { code: '159920', name: '香港ETF', price: 2.156, change: 0.056, changePct: 2.67, volume: 15678234, amount: 3.38, pe: 15.6, pb: 1.45, waveScore: 82, trend: '上升' },
-  { code: '510500', name: '中证500ETF', price: 5.892, change: 0.034, changePct: 0.58, volume: 7654321, amount: 4.51, pe: 17.8, pb: 1.58, waveScore: 78, trend: '上升' },
-  { code: '159808', name: '创业板50ETF', price: 0.987, change: -0.012, changePct: -1.20, volume: 21345678, amount: 2.11, pe: 35.2, pb: 4.5, waveScore: 45, trend: '下跌' }
+  {
+    code: '510300',
+    name: '沪深300ETF',
+    price: 3.856,
+    change: 0.015,
+    changePct: 0.39,
+    volume: 18567432,
+    amount: 7.15,
+    pe: 12.5,
+    pb: 1.32,
+    // 波段心法指标
+    weekAboveMA60: true,   // 周K线在60周线上方 ✓
+    dayBelowMA60: true,    // 日K线在60日线下方 ✓
+    backToWeekMA30: true,  // 回踩30周线 ✓
+    deadCrossFormed: true,  // 之前形成死叉 ✓
+    kdjJ: 15,              // KDJ J值 0-20 普通买入
+    dayCrossMA30: false,   // 未上穿30日线
+    dayCrossMA60: false,   // 未上穿60日线
+    breakHighWith4Percent: false,
+    dayBreakMA30: false,
+    weekBelowMA60: false
+  },
+  {
+    code: '510500',
+    name: '500ETF',
+    price: 5.672,
+    change: -0.023,
+    changePct: -0.40,
+    volume: 8932451,
+    amount: 5.06,
+    pe: 18.2,
+    pb: 1.65,
+    weekAboveMA60: false,  // 周K线在60周线下方 ✗
+    dayBelowMA60: true,
+    backToWeekMA30: false,
+    deadCrossFormed: false,
+    kdjJ: 25,
+    dayCrossMA30: false,
+    dayCrossMA60: false,
+    breakHighWith4Percent: false,
+    dayBreakMA30: false,
+    weekBelowMA60: true
+  },
+  {
+    code: '159919',
+    name: '券商ETF',
+    price: 1.245,
+    change: 0.038,
+    changePct: 3.15,
+    volume: 45678234,
+    amount: 5.68,
+    pe: 22.5,
+    pb: 1.89,
+    weekAboveMA60: true,   // 牛市阶段 ✓
+    dayBelowMA60: false,  // 日K线在60日线上方 ✗
+    backToWeekMA30: true,
+    deadCrossFormed: true,
+    kdjJ: 80,
+    dayCrossMA30: true,   // 已上穿30日线 - 减少买入
+    dayCrossMA60: false,
+    breakHighWith4Percent: true, // 突破前高出现4%大阳线 - 顶部区域
+    dayBreakMA30: false,
+    weekBelowMA60: false
+  },
+  {
+    code: '159995',
+    name: '券商ETF',
+    price: 1.123,
+    change: 0.025,
+    changePct: 2.28,
+    volume: 32456789,
+    amount: 3.64,
+    pe: 20.8,
+    pb: 1.75,
+    weekAboveMA60: true,
+    dayBelowMA60: false,
+    backToWeekMA30: true,
+    deadCrossFormed: false,
+    kdjJ: 65,
+    dayCrossMA30: true,
+    dayCrossMA60: false,
+    breakHighWith4Percent: false,
+    dayBreakMA30: false,
+    weekBelowMA60: false
+  },
+  {
+    code: '512880',
+    name: '证券ETF',
+    price: 1.567,
+    change: 0.042,
+    changePct: 2.75,
+    volume: 28945678,
+    amount: 4.53,
+    pe: 21.3,
+    pb: 1.82,
+    weekAboveMA60: true,
+    dayBelowMA60: false,
+    backToWeekMA30: false,
+    deadCrossFormed: true,
+    kdjJ: 90,
+    dayCrossMA30: true,
+    dayCrossMA60: true,   // 已上穿60日线 - 停止买入
+    breakHighWith4Percent: true,
+    dayBreakMA30: true,   // 跌破30日线 - 卖出信号
+    weekBelowMA60: false
+  },
+  {
+    code: '159941',
+    name: '纳指ETF',
+    price: 2.345,
+    change: -0.015,
+    changePct: -0.64,
+    volume: 12345678,
+    amount: 2.89,
+    pe: 28.5,
+    pb: 3.2,
+    weekAboveMA60: false,  // 熊市 ✗
+    dayBelowMA60: true,
+    backToWeekMA30: false,
+    deadCrossFormed: false,
+    kdjJ: -10,
+    dayCrossMA30: false,
+    dayCrossMA60: false,
+    breakHighWith4Percent: false,
+    dayBreakMA30: true,
+    weekBelowMA60: true    // 周K线跌破60周线 - 清仓信号
+  },
+  {
+    code: '513050',
+    name: '中概互联网ETF',
+    price: 1.023,
+    change: 0.008,
+    changePct: 0.79,
+    volume: 9876543,
+    amount: 1.01,
+    pe: 32.1,
+    pb: 2.8,
+    weekAboveMA60: true,   // 牛市阶段 ✓
+    dayBelowMA60: true,    // 日K线在60日线下方 ✓
+    backToWeekMA30: true,  // 回踩30周线 ✓
+    deadCrossFormed: true,  // 之前形成死叉 ✓
+    kdjJ: 5,               // J值 < 0 大幅买入
+    dayCrossMA30: false,
+    dayCrossMA60: false,
+    breakHighWith4Percent: false,
+    dayBreakMA30: false,
+    weekBelowMA60: false
+  },
+  {
+    code: '159920',
+    name: '香港ETF',
+    price: 2.156,
+    change: 0.056,
+    changePct: 2.67,
+    volume: 15678234,
+    amount: 3.38,
+    pe: 15.6,
+    pb: 1.45,
+    weekAboveMA60: true,
+    dayBelowMA60: true,
+    backToWeekMA30: false,
+    deadCrossFormed: true,
+    kdjJ: 30,
+    dayCrossMA30: false,
+    dayCrossMA60: false,
+    breakHighWith4Percent: false,
+    dayBreakMA30: false,
+    weekBelowMA60: false
+  },
+  {
+    code: '159808',
+    name: '创业板50ETF',
+    price: 0.987,
+    change: -0.012,
+    changePct: -1.20,
+    volume: 21345678,
+    amount: 2.11,
+    pe: 35.2,
+    pb: 4.5,
+    weekAboveMA60: false,  // 熊市 ✗
+    dayBelowMA60: true,
+    backToWeekMA30: false,
+    deadCrossFormed: false,
+    kdjJ: -5,
+    dayCrossMA30: false,
+    dayCrossMA60: false,
+    breakHighWith4Percent: false,
+    dayBreakMA30: true,
+    weekBelowMA60: true    // 清仓信号
+  },
+  {
+    code: '512880',
+    name: '石油ETF',
+    price: 1.234,
+    change: -0.025,
+    changePct: -1.98,
+    volume: 15678234,
+    amount: 1.93,
+    pe: 10.5,
+    pb: 1.2,
+    weekAboveMA60: true,
+    dayBelowMA60: true,
+    backToWeekMA30: true,
+    deadCrossFormed: true,
+    kdjJ: -15,             // J值 < 0 千股跌停可满仓
+    dayCrossMA30: false,
+    dayCrossMA60: false,
+    breakHighWith4Percent: false,
+    dayBreakMA30: false,
+    weekBelowMA60: false
+  }
 ];
 
 const MOCK_STOCK_DATA = [
@@ -31,8 +232,25 @@ const MOCK_STOCK_DATA = [
 
 function filterByWaveStrategy(etfs, config) {
   return etfs.filter(etf => {
-    if (etf.waveScore >= config.waveScoreMin) return false;
-    if (etf.trend === '下跌') return false;
+    const c = config.waveStrategy;
+    
+    // 选标的：周K线必须在60周线上方（牛市阶段）
+    if (!c.weekAboveMA60 || !etf.weekAboveMA60) return false;
+    
+    // 买入条件 3a: 日K线在60日线下方
+    if (!c.buy.dayBelowMA60 || !etf.dayBelowMA60) return false;
+    
+    // 买入条件 3b: 回踩30周线并站稳，且之前形成死叉
+    if (!c.buy.backToWeekMA30 || !etf.backToWeekMA30) return false;
+    if (!c.buy.deadCrossFormed || !etf.deadCrossFormed) return false;
+    
+    // 停止买入信号：日K线上穿30日线/60日线
+    if (etf.dayCrossMA30 && c.stopBuy.dayCrossMA30) return false;
+    if (etf.dayCrossMA60 && c.stopBuy.dayCrossMA60) return false;
+    
+    // 清仓信号：周K线跌破60周线
+    if (etf.weekBelowMA60 && c.clearPosition.weekBelowMA60) return false;
+    
     return true;
   });
 }
@@ -48,16 +266,44 @@ function filterByCigButtStrategy(stocks, config) {
   });
 }
 
+function getBuySuggestion(etf) {
+  if (etf.kdjJ > 20) {
+    return '小幅买入';
+  } else if (etf.kdjJ >= 0) {
+    return '普通买入';
+  } else {
+    return '大幅买入/满仓';
+  }
+}
+
+function getStatus(etf) {
+  if (etf.breakHighWith4Percent && !etf.dayBreakMA30) {
+    return '⚠️ 顶部区域';
+  }
+  if (etf.dayBreakMA30) {
+    return '🔴 卖出信号';
+  }
+  if (etf.dayCrossMA60) {
+    return '⏹️ 停止买入';
+  }
+  if (etf.dayCrossMA30) {
+    return '⚡ 减少买入';
+  }
+  return '✅ 买入区间';
+}
+
 async function main() {
   console.log('\n\x1b[36m╔════════════════════════════════════════╗\x1b[0m');
   console.log('\x1b[36m║\x1b[0m    \x1b[1;32mA-Stock-Warrior\x1b[0m 大A战士 v1.0      \x1b[36m║\x1b[0m');
   console.log('\x1b[36m╚════════════════════════════════════════╝\x1b[0m\n');
   
   console.log('\x1b[33m📊 波段心法策略 - ETF筛选\x1b[0m');
-  const waveFiltered = filterByWaveStrategy(MOCK_ETF_DATA, config.waveStrategy);
-  output.printETFTable(waveFiltered);
+  console.log('\x1b[90m筛选条件: 周K线在60周线上方 + 日K线在60日线下方 + 回踩30周线 + 死叉形成\x1b[0m\n');
   
-  console.log('\x1b[33m📊 捡烟蒂策略 - 股票筛选\x1b[0m');
+  const waveFiltered = filterByWaveStrategy(MOCK_ETF_DATA, config);
+  output.printWaveETFTable(waveFiltered);
+  
+  console.log('\n\x1b[33m📊 捡烟蒂策略 - 股票筛选\x1b[0m');
   const cigButtFiltered = filterByCigButtStrategy(MOCK_STOCK_DATA, config.cigButtStrategy);
   output.printStockTable(cigButtFiltered);
   

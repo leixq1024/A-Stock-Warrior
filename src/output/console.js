@@ -1,6 +1,6 @@
-const { Table, printTable } = require('console-table-printer');
+const { Table } = require('console-table-printer');
 
-function printETFTable(etfs) {
+function printWaveETFTable(etfs) {
   if (etfs.length === 0) {
     console.log('  暂无符合条件的ETF\n');
     return;
@@ -10,9 +10,9 @@ function printETFTable(etfs) {
     代码: etf.code,
     名称: etf.name,
     价格: etf.price.toFixed(3),
-    涨跌幅: (etf.changePct >= 0 ? '+' : '') + etf.changePct.toFixed(2) + '%',
-    波段: etf.waveScore,
-    趋势: etf.trend
+    涨跌: (etf.changePct >= 0 ? '+' : '') + etf.changePct.toFixed(2) + '%',
+    建议: getBuySuggestion(etf),
+    状态: getStatus(etf)
   }));
   
   const t = new Table({
@@ -20,15 +20,42 @@ function printETFTable(etfs) {
       { name: '代码', color: 'cyan', alignment: 'left' },
       { name: '名称', alignment: 'left' },
       { name: '价格', color: 'yellow', alignment: 'right' },
-      { name: '涨跌幅', color: 'green', alignment: 'right' },
-      { name: '波段', color: 'magenta', alignment: 'right' },
-      { name: '趋势', color: 'blue', alignment: 'center' }
+      { name: '涨跌', color: 'green', alignment: 'right' },
+      { name: '建议', color: 'magenta', alignment: 'center' },
+      { name: '状态', color: 'blue', alignment: 'center' }
     ]
   });
   
   t.addRows(data);
   t.printTable();
   console.log('');
+}
+
+function getBuySuggestion(etf) {
+  if (!etf.kdjJ) return '-';
+  if (etf.kdjJ > 20) {
+    return '小幅';
+  } else if (etf.kdjJ >= 0) {
+    return '普通';
+  } else {
+    return '大幅/满仓';
+  }
+}
+
+function getStatus(etf) {
+  if (etf.breakHighWith4Percent && !etf.dayBreakMA30) {
+    return '⚠️顶部';
+  }
+  if (etf.dayBreakMA30) {
+    return '🔴卖出';
+  }
+  if (etf.dayCrossMA60) {
+    return '⏹️停买';
+  }
+  if (etf.dayCrossMA30) {
+    return '⚡少买';
+  }
+  return '✅买入';
 }
 
 function printStockTable(stocks) {
@@ -69,6 +96,6 @@ function printStockTable(stocks) {
 }
 
 module.exports = {
-  printETFTable,
+  printWaveETFTable,
   printStockTable
 };
