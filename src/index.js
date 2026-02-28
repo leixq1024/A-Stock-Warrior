@@ -49,25 +49,20 @@ function filterByCigButtStrategy(stocks, config) {
 }
 
 async function main() {
-  console.log('');
-  console.log('╔════════════════════════════════════════╗');
-  console.log('║      A-Stock-Warrior 大A战士 v1.0      ║');
-  console.log('╚════════════════════════════════════════╝');
-  console.log('');
+  console.log('\n\x1b[36m╔════════════════════════════════════════╗\x1b[0m');
+  console.log('\x1b[36m║\x1b[0m    \x1b[1;32mA-Stock-Warrior\x1b[0m 大A战士 v1.0      \x1b[36m║\x1b[0m');
+  console.log('\x1b[36m╚════════════════════════════════════════╝\x1b[0m\n');
   
-  console.log('📊 波段心法策略 - ETF筛选');
-  console.log('─'.repeat(50));
+  console.log('\x1b[33m📊 波段心法策略 - ETF筛选\x1b[0m');
   const waveFiltered = filterByWaveStrategy(MOCK_ETF_DATA, config.waveStrategy);
-  output.printResults('etf', waveFiltered);
+  output.printETFTable(waveFiltered);
   
-  console.log('📊 捡烟蒂策略 - 股票筛选');
-  console.log('─'.repeat(50));
+  console.log('\x1b[33m📊 捡烟蒂策略 - 股票筛选\x1b[0m');
   const cigButtFiltered = filterByCigButtStrategy(MOCK_STOCK_DATA, config.cigButtStrategy);
-  output.printResults('stock', cigButtFiltered);
+  output.printStockTable(cigButtFiltered);
   
-  console.log('─'.repeat(50));
-  console.log(`📈 共筛选 ETF: ${waveFiltered.length} 只 | 股票: ${cigButtFiltered.length} 只`);
-  console.log('');
+  console.log('\x1b[90m──────────────────────────────────────────────────\x1b[0m');
+  console.log(`\x1b[35m📈 共筛选 ETF: ${waveFiltered.length} 只 | 股票: ${cigButtFiltered.length} 只\x1b[0m\n`);
 }
 
 main().catch(console.error);
