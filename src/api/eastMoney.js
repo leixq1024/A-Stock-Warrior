@@ -1,31 +1,38 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 const iconv = require('iconv-lite');
-const http = require('http');
 const https = require('https');
 
-const BASE_URL = 'http://quote.eastmoney.com';
-
-async function request(url, options = {}) {
-  const maxRetries = 3;
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const response = await axios.get(url, {
-        timeout: 15000,
-        ...options
-      });
-      return response.data;
-    } catch (error) {
-      if (i === maxRetries - 1) {
-        console.error(`请求失败: ${url}`, error.message);
-        throw error;
-      }
-      await new Promise(r => setTimeout(r, 1000));
-    }
-  }
-}
+const randHeader = () => {
+  const head_connection = ['Keep-Alive', 'close'];
+  const head_accept = ['text/html, application/xhtml+xml, */*'];
+  const head_accept_language = [
+    'zh-CN,fr-FR;q=0.5',
+    'en-US,en;q=0.8,zh-Hans-CN;q=0.5,zh-Hans;q=0.3',
+  ];
+  const head_user_agent = [
+    'Opera/8.0 (Macintosh; PPC Mac OS X; U; en)',
+    'Opera/9.27 (Windows NT 5.2; U; zh-cn)',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Win64; x64; Trident/4.0)',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)',
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.2; .NET4.0C; .NET4.0E)',
+    'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; rv:11.0) like Gecko)',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0 ',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Maxthon/4.0.6.2000 Chrome/26.0.1410.43 Safari/537.1 ',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko',
+  ];
+  const result = {
+    Connection: head_connection[0],
+    Accept: head_accept[0],
+    'Accept-Language': head_accept_language[1],
+    'User-Agent': head_user_agent[Math.floor(Math.random() * head_user_agent.length)],
+  };
+  return result;
+};
 
 function parseSinaStockData(data) {
+  if (!data) return [];
   const lines = data.split(';\n');
   const results = [];
   
@@ -72,254 +79,202 @@ function parseSinaStockData(data) {
   return results;
 }
 
-async function getStockQuote(code) {
+function httpGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
-    const sinaCode = code.startsWith('6') ? `sh${code}` : `sz${code}`;
-    const url = `https://hq.sinajs.cn/list=${sinaCode}`;
-    
-    const req = https.get(url, {
-      headers: {
-        'Referer': 'http://finance.sina.com.cn/',
-        'User-Agent': 'Mozilla/5.0'
-      }
+    const req = https.get(url, { 
+      headers: { ...randHeader(), ...headers },
+      agent: new https.Agent({ rejectUnauthorized: false })
     }, (res) => {
       let data = [];
       res.on('data', chunk => data.push(chunk));
       res.on('end', () => {
-        try {
-          const buf = Buffer.concat(data);
-          const str = iconv.decode(buf, 'GB18030');
-          const stocks = parseSinaStockData(str);
-          resolve(stocks[0] || null);
-        } catch (error) {
-          console.error('解析股票数据失败:', error.message);
-          resolve(null);
-        }
+        resolve(Buffer.concat(data));
       });
     });
-    
-    req.on('error', (error) => {
-      console.error('获取股票数据失败:', error.message);
-      resolve(null);
-    });
-    
-    req.setTimeout(10000, () => {
-      req.destroy();
-      resolve(null);
-    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('timeout')); });
   });
+}
+
+async function getStockQuote(code) {
+  try {
+    let sinaCode;
+    if (code.startsWith('6') || code.startsWith('5')) {
+      sinaCode = `sh${code}`;
+    } else {
+      sinaCode = `sz${code}`;
+    }
+    const url = `https://hq.sinajs.cn/list=${sinaCode}`;
+    
+    const buf = await httpGet(url, {
+      'Referer': 'http://finance.sina.com.cn/'
+    });
+    
+    const str = iconv.decode(buf, 'GB18030');
+    const stocks = parseSinaStockData(str);
+    return stocks[0] || null;
+  } catch (e) {
+    console.log(`获取行情失败 ${code}:`, e.message);
+    return null;
+  }
 }
 
 async function getStockDataByCodes(codes) {
   if (!codes || codes.length === 0) return [];
   
-  return new Promise((resolve, reject) => {
-    const sinaCodes = codes.map(code => 
-      code.startsWith('6') ? `sh${code}` : `sz${code}`
-    );
+  try {
+    const sinaCodes = codes.map(code => {
+      if (code.startsWith('6') || code.startsWith('5')) {
+        return `sh${code}`;
+      }
+      return `sz${code}`;
+    });
     
     const url = `https://hq.sinajs.cn/list=${sinaCodes.join(',')}`;
-    
-    const req = https.get(url, {
-      headers: {
-        'Referer': 'http://finance.sina.com.cn/',
-        'User-Agent': 'Mozilla/5.0'
-      }
-    }, (res) => {
-      let data = [];
-      res.on('data', chunk => data.push(chunk));
-      res.on('end', () => {
-        try {
-          const buf = Buffer.concat(data);
-          const str = iconv.decode(buf, 'GB18030');
-          const stocks = parseSinaStockData(str);
-          resolve(stocks);
-        } catch (error) {
-          console.error('解析股票数据失败:', error.message);
-          resolve([]);
-        }
-      });
+    const buf = await httpGet(url, {
+      'Referer': 'http://finance.sina.com.cn/'
     });
     
-    req.on('error', (error) => {
-      console.error('获取股票数据失败:', error.message);
-      resolve([]);
-    });
-  });
+    const str = iconv.decode(buf, 'GB18030');
+    return parseSinaStockData(str);
+  } catch {
+    return [];
+  }
 }
 
-async function getFundList(type = '股票型') {
-  return new Promise((resolve, reject) => {
-    const http = require('http');
-    const url = 'http://fund.eastmoney.com/js/fundcode_search.js';
-    
-    http.get(url, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const match = data.match(/var r = (\[[\s\S]*\]);/);
-          if (!match) {
-            resolve([]);
-            return;
-          }
-          
-          const funds = JSON.parse(match[1]);
-          const typeMap = {
-            '股票型': ['股票型'],
-            '混合型': ['混合型'],
-            '指数型': ['指数型'],
-            '债券型': ['债券型']
-          };
-          
-          const filteredFunds = funds
-            .filter(item => {
-              if (type === '全部') return true;
-              const fundType = item[3];
-              return fundType && fundType.includes(type.split('-')[0]);
-            })
-            .slice(0, 50)
-            .map(item => ({
-              code: item[0],
-              name: item[2],
-              type: item[3]
-            }));
-          
-          resolve(filteredFunds);
-        } catch (error) {
-          console.error('解析基金列表失败:', error.message);
-          resolve([]);
-        }
-      });
-    }).on('error', (error) => {
-      console.error('获取基金列表失败:', error.message);
-      resolve([]);
-    });
-  });
-}
-
-async function getFundDetailsByCodes(codes) {
-  if (!codes || codes.length === 0) return [];
-  
-  const validCodes = codes.filter(c => c && c.length > 0);
-  if (validCodes.length === 0) return [];
-  
-  const url = 'https://fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo';
-  const params = {
-    pageIndex: 1,
-    pageSize: validCodes.length,
-    plat: 'Android',
-    appType: 'ttjj',
-    product: 'EFund',
-    version: '1',
-    deviceid: 'test',
-    Fcodes: validCodes.join(',')
-  };
-  
+async function getKLineData(code, days = 500) {
   try {
-    const response = await axios.get(url, { params, timeout: 15000 });
-    if (response.data && response.data.Datas) {
-      return response.data.Datas.map(item => ({
-        code: item.FCODE,
-        name: item.SHORTNAME || item.NAME,
-        type: item.FUNDTYPE || '',
-        unitNav: parseFloat(item.NAV) || 0,
-        accumNav: parseFloat(item.ACCNAV) || 0,
-        dailyGrowth: parseFloat(item.NAVCHGRT) || 0
+    let tencentCode;
+    if (code.startsWith('6') || code.startsWith('5')) {
+      tencentCode = `sh${code}`;
+    } else {
+      tencentCode = `sz${code}`;
+    }
+    const url = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${tencentCode},day,,,${days},qr`;
+    
+    const buf = await httpGet(url, {
+      'Referer': 'https://finance.sina.com.cn/'
+    });
+    
+    const str = iconv.decode(buf, 'utf-8');
+    const data = JSON.parse(str);
+    
+    if (data.data && data.data[tencentCode] && data.data[tencentCode].day) {
+      const klines = data.data[tencentCode].day;
+      return klines.map(k => ({
+        time: k[0],
+        open: parseFloat(k[1]),
+        high: parseFloat(k[2]),
+        low: parseFloat(k[3]),
+        close: parseFloat(k[4]),
+        volume: parseFloat(k[5])
       }));
     }
-  } catch (error) {
-    console.error('获取基金详情失败:', error.message);
+    return [];
+  } catch (e) {
+    console.log(`获取K线失败 ${code}:`, e.message);
+    return [];
   }
-  
-  return [];
 }
 
-async function getFundDetail(code) {
-  const url = `https://fund.eastmoney.com/${code}.html`;
+function calculateMA(data, period) {
+  if (data.length < period) return null;
+  const sum = data.slice(-period).reduce((a, b) => a + b, 0);
+  return sum / period;
+}
+
+function calculateKDJ(data, period = 9) {
+  if (data.length < period) return null;
   
-  try {
-    const response = await request(url);
-    const $ = cheerio.load(response);
-    
-    const result = { code };
-    
-    $('.infoOfFund tr').each((trIndex, tr) => {
-      $(tr).find('td').each((tdIndex, td) => {
-        const text = $(td).text();
-        if (text.includes('基金规模')) {
-          const match = text.match(/基金规模：(.*)/);
-          if (match) result.scale = match[1];
-        }
-        if (text.includes('基金经理')) {
-          const match = text.match(/基金经理：(.*)/);
-          if (match) result.manager = match[1];
-        }
+  const rsv = [];
+  for (let i = period - 1; i < data.length; i++) {
+    const high = Math.max(...data.slice(i - period + 1, i + 1).map(d => d.high));
+    const low = Math.min(...data.slice(i - period + 1, i + 1).map(d => d.low));
+    const close = data[i].close;
+    if (high === low) rsv.push(50);
+    else rsv.push((close - low) / (high - low) * 100);
+  }
+  
+  let k = 50, d = 50, j = 50;
+  for (const r of rsv) {
+    k = (2 * k + r) / 3;
+    d = (2 * d + k) / 3;
+    j = 3 * k - 2 * d;
+  }
+  
+  return { k, d, j };
+}
+
+function calculateWeeklyMA(data) {
+  // 每5个交易日取一周的数据（忽略节假日）
+  const weeklyData = [];
+  for (let i = 4; i < data.length; i += 5) {
+    const weekData = data.slice(i - 4, i + 1);
+    if (weekData.length > 0) {
+      weeklyData.push({
+        close: weekData[weekData.length - 1].close,
+        high: Math.max(...weekData.map(d => d.high)),
+        low: Math.min(...weekData.map(d => d.low))
       });
-    });
-    
-    const navData = $('.dataOfFund');
-    if (navData.length) {
-      result.latest1m = navData.find('.dataItem01 dd:nth-child(3) span').text();
-      result.latest3m = navData.find('.dataItem02 dd:nth-child(3) span').text();
-      result.latest6m = navData.find('.dataItem03 dd:nth-child(3) span').text();
-      result.latest12m = navData.find('.dataItem01 dd:nth-child(4) span').text();
     }
-    
-    return result;
-  } catch (error) {
-    console.error(`获取基金 ${code} 详情失败`);
-    return { code };
   }
+  
+  const closes = weeklyData.map(d => d.close);
+  return {
+    ma60: calculateMA(closes, 60),
+    ma30: calculateMA(closes, 30)
+  };
 }
 
-async function getFundRank(type = '股票型', sort = 'rzdf') {
-  const typeMap = {
-    '股票型': 'gp',
-    '混合型': 'hh',
-    '指数型': 'zs',
-    '债券型': 'zq'
-  };
+async function getETFWaveIndicators(code) {
+  console.log(`获取 ${code} 数据...`);
   
-  const url = 'https://fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo';
-  const params = {
-    pageIndex: 1,
-    pageSize: 50,
-    plat: 'Android',
-    appType: 'ttjj',
-    product: 'EFund',
-    version: '1.0.0',
-    deviceid: 'test',
-    Fcodes: ''
-  };
+  const [quote, klines] = await Promise.all([
+    getStockQuote(code),
+    getKLineData(code, 300)
+  ]);
   
-  try {
-    const response = await axios.get(url, { params, timeout: 15000 });
-    if (response.data && response.data.Datas) {
-      return response.data.Datas.map(item => ({
-        code: item.FCODE,
-        name: item.NAME,
-        type: item.FUNDTYPE || type,
-        scale: item.MARKETVALUE || 0,
-        unitNav: parseFloat(item.NAV),
-        accumNav: parseFloat(item.ACCNAV),
-        dailyGrowth: parseFloat(item.DAYGrowth || 0),
-        annualReturn: parseFloat(item.Yield || 0),
-        managementFee: parseFloat(item.MANAGEFEE || 0),
-        custodyFee: parseFloat(item.CUSTODYFEE || 0)
-      }));
-    }
-  } catch (error) {
-    console.error('获取基金排行失败:', error.message);
+  if (!quote) {
+    console.log(`${code} 行情数据获取失败`);
+    return null;
   }
   
-  return [];
+  if (klines.length === 0) {
+    console.log(`${code} K线数据获取失败`);
+    return { ...quote, error: 'K线数据获取失败' };
+  }
+  
+  const closes = klines.map(d => d.close);
+  
+  const dayMA60 = calculateMA(closes, 60);
+  const dayMA30 = calculateMA(closes, 30);
+  const kdj = calculateKDJ(klines);
+  const weekMA = calculateWeeklyMA(klines);
+  
+  const lastClose = closes[closes.length - 1];
+  
+  return {
+    code,
+    name: quote.name,
+    price: quote.price,
+    change: quote.change,
+    changePct: quote.changePct,
+    volume: quote.volume,
+    amount: quote.amount,
+    weekAboveMA60: weekMA.ma60 ? lastClose > weekMA.ma60 : null,
+    dayBelowMA60: dayMA60 ? lastClose < dayMA60 : null,
+    backToWeekMA30: weekMA.ma30 ? Math.abs(lastClose - weekMA.ma30) / weekMA.ma30 < 0.02 : null,
+    kdjJ: kdj ? kdj.j : null,
+    dayMA60,
+    dayMA30,
+    weekMA60: weekMA.ma60,
+    weekMA30: weekMA.ma30
+  };
 }
 
 module.exports = {
   getStockQuote,
   getStockDataByCodes,
-  getFundList,
-  getFundDetail,
-  getFundDetailsByCodes
+  getKLineData,
+  getETFWaveIndicators
 };

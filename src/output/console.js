@@ -1,7 +1,7 @@
 const { Table } = require('console-table-printer');
 
 function printWaveETFTable(etfs) {
-  if (etfs.length === 0) {
+  if (!etfs || !Array.isArray(etfs) || etfs.length === 0) {
     console.log('  暂无符合条件的ETF\n');
     return;
   }

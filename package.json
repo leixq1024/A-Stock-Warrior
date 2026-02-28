@@ -1,7 +1,7 @@
 {
   "name": "a-stock-warrior",
-  "version": "1.0.0",
-  "description": "大A战士 - 定期执行股票和ETF策略筛选工具",
+  "version": "2.0.0",
+  "description": "大A战士 - ETF波段策略筛选工具",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js"
