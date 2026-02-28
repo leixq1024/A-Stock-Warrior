@@ -1,23 +1,14 @@
 module.exports = {
-  stock: {
-    fundamental: {
-      peMax: 50,
-      peMin: 0,
-      pbMax: 10,
-      roeMin: 10,
-      marketCapMin: 0,
-      marketCapMax: 1e14
-    },
-    technical: {
-      maPeriods: [5, 10, 20],
-      momentumDays: 20,
-      momentumMin: -10,
-      volumeRatio: 0.5
-    }
+  waveStrategy: {
+    waveScoreMin: 70,
+    allowTrend: ['上升', '震荡']
   },
-  fund: {
-    type: ['股票型', '混合型', '指数型'],
-    scaleMin: 0,
-    performanceMin: -50
+  cigButtStrategy: {
+    peMin: 0,
+    peMax: 15,
+    pbMax: 1.5,
+    roeMin: 10,
+    dividendYieldMin: 2,
+    pbRankMax: 30
   }
 };

@@ -4,9 +4,7 @@
   "description": "大A战士 - 定期执行股票和ETF策略筛选工具",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "stock": "node src/index.js stock",
-    "fund": "node src/index.js fund"
+    "start": "node src/index.js"
   },
   "keywords": [
     "量化",

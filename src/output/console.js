@@ -7,6 +7,19 @@ function printStock(stock) {
   if (stock.pb) console.log(`市净率: ${stock.pb}`);
   if (stock.marketCap) console.log(`总市值: ${(stock.marketCap / 1e8).toFixed(2)}亿`);
   if (stock.roe) console.log(`ROE: ${stock.roe}%`);
+  if (stock.dividendYield) console.log(`股息率: ${stock.dividendYield}%`);
+  if (stock.pbRank) console.log(`PB排名: ${stock.pbRank}`);
+}
+
+function printETF(etf) {
+  console.log('----------------------------------------');
+  console.log(`代码: ${etf.code}  名称: ${etf.name}`);
+  console.log(`价格: ${etf.price}  涨跌: ${etf.change} (${etf.changePct}%)`);
+  console.log(`成交量: ${etf.volume}  成交额: ${etf.amount}`);
+  if (etf.pe) console.log(`市盈率: ${etf.pe}`);
+  if (etf.pb) console.log(`市净率: ${etf.pb}`);
+  if (etf.waveScore) console.log(`波段评分: ${etf.waveScore}`);
+  if (etf.trend) console.log(`趋势: ${etf.trend}`);
 }
 
 function printFund(fund) {
@@ -21,19 +34,25 @@ function printFund(fund) {
 }
 
 function printResults(type, results) {
-  console.log(`\n共筛选出 ${results.length} 只${type === 'stock' ? '股票' : '基金'}:\n`);
+  if (results.length === 0) {
+    console.log('暂无符合条件的标的\n');
+    return;
+  }
   
-  if (type === 'stock') {
+  if (type === 'etf') {
+    results.forEach(printETF);
+  } else if (type === 'stock') {
     results.forEach(printStock);
-  } else {
+  } else if (type === 'fund') {
     results.forEach(printFund);
   }
   
-  console.log('\n========================================\n');
+  console.log('\n');
 }
 
 module.exports = {
   printStock,
+  printETF,
   printFund,
   printResults
 };
