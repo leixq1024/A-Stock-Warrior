@@ -1,25 +1,10 @@
-function printStock(stock) {
-  console.log('----------------------------------------');
-  console.log(`代码: ${stock.code}  名称: ${stock.name}`);
-  console.log(`价格: ${stock.price}  涨跌: ${stock.change} (${stock.changePct}%)`);
-  console.log(`成交量: ${stock.volume}  成交额: ${stock.amount}`);
-  if (stock.pe) console.log(`市盈率: ${stock.pe}`);
-  if (stock.pb) console.log(`市净率: ${stock.pb}`);
-  if (stock.marketCap) console.log(`总市值: ${(stock.marketCap / 1e8).toFixed(2)}亿`);
-  if (stock.roe) console.log(`ROE: ${stock.roe}%`);
-  if (stock.dividendYield) console.log(`股息率: ${stock.dividendYield}%`);
-  if (stock.pbRank) console.log(`PB排名: ${stock.pbRank}`);
+function printETF(etf) {
+  console.log(`  ${etf.code}  ${etf.name.padEnd(12)}  ${etf.price.toFixed(3)}  ${etf.change >= 0 ? '+' : ''}${etf.changePct.toFixed(2)}%  波段:${etf.waveScore}  趋势:${etf.trend}`);
 }
 
-function printETF(etf) {
-  console.log('----------------------------------------');
-  console.log(`代码: ${etf.code}  名称: ${etf.name}`);
-  console.log(`价格: ${etf.price}  涨跌: ${etf.change} (${etf.changePct}%)`);
-  console.log(`成交量: ${etf.volume}  成交额: ${etf.amount}`);
-  if (etf.pe) console.log(`市盈率: ${etf.pe}`);
-  if (etf.pb) console.log(`市净率: ${etf.pb}`);
-  if (etf.waveScore) console.log(`波段评分: ${etf.waveScore}`);
-  if (etf.trend) console.log(`趋势: ${etf.trend}`);
+function printStock(stock) {
+  const marketCap = stock.marketCap ? (stock.marketCap / 1e8).toFixed(0) + '亿' : '-';
+  console.log(`  ${stock.code}  ${stock.name.padEnd(8)}  ${stock.price.toFixed(2)}  ${stock.change >= 0 ? '+' : ''}${stock.changePct.toFixed(2)}%  PE:${(stock.pe || '-').toString().padEnd(5)}  PB:${(stock.pb || '-').toString().padEnd(4)}  ROE:${(stock.roe || '-') + '%'}  股息:${(stock.dividendYield || '-') + '%'}  市值:${marketCap}`);
 }
 
 function printFund(fund) {
@@ -35,13 +20,17 @@ function printFund(fund) {
 
 function printResults(type, results) {
   if (results.length === 0) {
-    console.log('暂无符合条件的标的\n');
+    console.log('  暂无符合条件的标的\n');
     return;
   }
   
   if (type === 'etf') {
+    console.log('  代码      名称          价格      涨跌幅     波段  趋势');
+    console.log('  ' + '─'.repeat(60));
     results.forEach(printETF);
   } else if (type === 'stock') {
+    console.log('  代码     名称      价格      涨跌幅    PE    PB    ROE    股息    市值');
+    console.log('  ' + '─'.repeat(80));
     results.forEach(printStock);
   } else if (type === 'fund') {
     results.forEach(printFund);
